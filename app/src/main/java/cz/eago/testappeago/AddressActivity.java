@@ -9,8 +9,6 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
-import android.view.View;
-import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -32,14 +30,6 @@ public class AddressActivity extends Activity {
 
         mIntentFilter = new IntentFilter();
         mIntentFilter.addAction(mBroadcastStringAction);
-
-        text = (TextView)findViewById(R.id.textAddress);
-        final Button button = (Button) findViewById(R.id.button);
-        button.setOnClickListener(new View.OnClickListener() {
-            public void onClick(View v) {
-                text.setText(mainService.getCurrentAddress());
-            }
-        });
 	}
 
     @Override
@@ -47,7 +37,7 @@ public class AddressActivity extends Activity {
         super.onStart();
         Intent mIntent = new Intent(this, MainService.class);
         bindService(mIntent, mConnection, BIND_AUTO_CREATE);
-    };
+    }
 
     ServiceConnection mConnection = new ServiceConnection() {
 

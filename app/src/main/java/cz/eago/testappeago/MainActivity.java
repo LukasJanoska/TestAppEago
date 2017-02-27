@@ -1,43 +1,59 @@
 package cz.eago.testappeago;
 
 import android.Manifest;
+import android.content.BroadcastReceiver;
+import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
+import android.net.ConnectivityManager;
+import android.net.NetworkInfo;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.IBinder;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.TextView;
 import android.widget.Toast;
 
 public class MainActivity extends FragmentActivity {
     LocationManager locationManager;
 	private static final int MY_PERMISSIONS_REQUEST = 0;
+    public static final String mBroadcastStringAction = "cz.eago.broadcast.string";
 
     boolean permissionCheck = false;
     boolean firstRun = true;
 
-	@Override
+    MainService mainService;
+    boolean mBounded;
+    private IntentFilter mIntentFilter;
+
+
+    @Override
 	public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
 		setContentView(R.layout.activity_main);
 
-        if(firstRun) {
+        if(savedInstanceState==null) {
             init();
         }
     }
 
     public void init() {
+
         locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 
         if (ContextCompat.checkSelfPermission(getApplicationContext(), Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED) {
             addSplashScreenFragment();
+            startService();
         } else {
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.ACCESS_FINE_LOCATION},
@@ -46,6 +62,12 @@ public class MainActivity extends FragmentActivity {
         }
 
         firstRun = false;
+    }
+
+    @Override
+    protected void onSaveInstanceState(Bundle outState) {
+        super.onSaveInstanceState(outState);
+        outState.putBoolean("firstRun", firstRun);
     }
 
     private void addSplashScreenFragment() {
@@ -62,6 +84,7 @@ public class MainActivity extends FragmentActivity {
                 // If request is cancelled, the result arrays are empty.
                 if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     addSplashScreenFragment();
+                    startService();
                 }else{
                     findViewById(R.id.permissionsDenied).setVisibility(View.VISIBLE);
                 }
@@ -115,23 +138,91 @@ public class MainActivity extends FragmentActivity {
         return true;
     }
 
-    /* private void showAlert() {
-        final AlertDialog.Builder dialog = new AlertDialog.Builder(this);
-        dialog.setTitle("Enable Location")
-                .setMessage("Your Locations Settings is set to 'Off'.\nPlease Enable Location to " +
-                        "use this app")
-                .setPositiveButton("Location Settings", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                        Intent myIntent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
-                        startActivity(myIntent);
-                    }
-                })
-                .setNegativeButton("Cancel", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface paramDialogInterface, int paramInt) {
-                    }
-                });
-        dialog.show();
+    private void isWifiAvailable(NetworkInfo networkInfo) {
+
+        if (networkInfo != null) { // connected to the internet
+            if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                // connected to wifi
+                Toast.makeText(getApplicationContext(), networkInfo.getTypeName(), Toast.LENGTH_SHORT).show();
+            } else if (networkInfo.getType() == ConnectivityManager.TYPE_MOBILE) {
+                // connected to the mobile provider's data plan
+                Toast.makeText(getApplicationContext(), networkInfo.getTypeName(), Toast.LENGTH_SHORT).show();
+            }
+        } else {
+            // not connected to the internet
+        }
+    }
+
+    ServiceConnection mConnection = new ServiceConnection() {
+
+        public void onServiceDisconnected(ComponentName name) {
+            Toast.makeText(MainActivity.this, "Service is disconnected", Toast.LENGTH_SHORT).show();
+            mBounded = false;
+            mainService = null;
+        }
+
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            Toast.makeText(MainActivity.this, "Service is connected", Toast.LENGTH_SHORT).show();
+            mBounded = true;
+            MainService.LocalBinder mLocalBinder = (MainService.LocalBinder)service;
+            mainService = mLocalBinder.getServiceInstance();
+            changeFragmentTextView(mainService.getCurrentLocationStr());
+
+        }
+    };
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        if(mBounded) {
+            unbindService(mConnection);
+            mBounded = false;
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if(mReceiver!=null) {
+            unregisterReceiver(mReceiver);
+        }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        mIntentFilter = new IntentFilter();
+        mIntentFilter.addAction(mBroadcastStringAction);
+        registerReceiver(mReceiver, mIntentFilter);
+    }
+
+    private void startService(){
+        startService(new Intent(this, MainService.class));
+    }
+
+    private BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent.getAction().equals(mBroadcastStringAction)) {
+                Toast.makeText(getApplicationContext(), "asdasad", Toast.LENGTH_LONG).show();
+                changeFragmentTextView(intent.getStringExtra("Data") + "\n\n");
+
+                //pridat tlacitko do menu
+
+            }
+        }
+    };
+
+    /*public void updateFragment(String data) {
+        AddressFragment fragment_obj =  (AddressFragment) getSupportFragmentManager().findFragmentByTag(AddressFragment.AddressFragmnetTag);
+        fragment_obj.setLocationText(data);
     }*/
+
+    public void changeFragmentTextView(String s) {
+        android.support.v4.app.Fragment frag = getSupportFragmentManager().findFragmentById(R.id.fragment_container);
+        if(frag.getView().findViewById(R.id.positionTxt) != null) {
+            ((TextView) frag.getView().findViewById(R.id.positionTxt)).setText(s);
+        }
+    }
+
 }
