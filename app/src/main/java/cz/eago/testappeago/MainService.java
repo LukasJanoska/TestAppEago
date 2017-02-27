@@ -98,12 +98,12 @@ public class MainService extends Service implements LocationListener {
 
     @Override
     public void onCreate() {
-        Toast.makeText(this, "The new Service was Created", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, "Service created", Toast.LENGTH_LONG).show();
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        Toast.makeText(this, " Service Started", Toast.LENGTH_LONG).show();
+        Toast.makeText(this, " Service started", Toast.LENGTH_LONG).show();
         getLocation();
         return 0;
     }

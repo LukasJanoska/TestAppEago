@@ -8,7 +8,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.IBinder;
 import android.view.View;
 import android.widget.Button;
@@ -27,7 +26,7 @@ public class AddressActivity extends Activity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
-		setContentView(R.layout.activity_address);
+		setContentView(R.layout.fragment_address);
 
         mTextView = (TextView) findViewById(R.id.positionTxt);
 
@@ -96,26 +95,6 @@ public class AddressActivity extends Activity {
             }
         }
     };
-
-    private Boolean exit = false;
-
-    @Override
-    public void onBackPressed() {
-        if (exit) {
-            finish();
-            stopService(new Intent(this, MainService.class));
-        } else {
-            String str = getString(R.string.backButtonStr);
-            Toast.makeText(this, str, Toast.LENGTH_SHORT).show();
-            exit = true;
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    exit = false;
-                }
-            }, 3 * 1000);
-        }
-    }
 
     private void setLocationText(String text){
         mTextView.setText(text);
